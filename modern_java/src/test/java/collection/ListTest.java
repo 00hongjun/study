@@ -3,6 +3,7 @@ package collection;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,13 +52,11 @@ class ListTest {
 
     /**
      * Map의 key, value를 이용한 정렬
-     *
-     * @throws Exception
      */
     @Test
     public void map_sort() throws Exception {
         //given
-        Map<Integer, String> map = new LinkedHashMap<>();
+        Map<Integer, String> map = new HashMap<>();
 
         //when
         map.put(1, "one");
@@ -77,7 +76,6 @@ class ListTest {
                 .stream()
                 .sorted(Map.Entry.comparingByValue())
                 .forEach(System.out::println);
-
     }
 
     /**
@@ -86,7 +84,7 @@ class ListTest {
     @Test
     public void map_get() throws Exception {
         //given
-        Map<Integer, String> map = new LinkedHashMap<>();
+        Map<Integer, String> map = new HashMap<>();
 
         //when
         map.put(1, "one");
@@ -101,5 +99,48 @@ class ListTest {
         map.computeIfPresent(2, (key, val) -> key + "_" + val);
         System.out.println(map);
         //{1=one, 3=three, 2=2_two, 4=four, 0=add_0}
+    }
+
+    /**
+     * putAll, merge를 이용해 map을 합칠수 있다.
+     * merge의 람다 param을 이용하여 동작을 지정 할 수 있다.
+     */
+    @Test
+    public void map_merge() throws Exception {
+        //given
+        Map<Integer, String> map = new HashMap<>();
+        map.put(1, "one");
+        map.put(2, "two");
+
+        HashMap<Integer, String> merge = new HashMap<>();
+        merge.put(3, "three");
+        merge.put(4, "four");
+
+        HashMap<Integer, String> merge2 = new HashMap<>();
+        merge2.put(2, "two");
+        merge2.put(3, "three");
+        merge2.put(4, "four");
+
+        //when
+        merge.putAll(map);
+        map.forEach((k, v) -> merge2.merge(k, v, (v1, v2) -> v1 + "_" + v2));
+
+        //then
+        System.out.println(merge);
+        //{1=one, 2=two, 3=three, 4=four}
+        System.out.println(merge2);
+        //{1=one, 2=two_two, 3=three, 4=four}
+    }
+
+    @Test
+    public void concurrentHashMap() throws Exception {
+        //given
+        ConcurrentHashMap<Integer, String> map = new ConcurrentHashMap<>();
+
+        //when
+        long size = map.mappingCount();
+
+        //then
+        System.out.println(size);
     }
 }
