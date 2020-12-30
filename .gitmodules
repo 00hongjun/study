@@ -1,0 +1,4 @@
+[submodule "toy"]
+	path = toy
+	url = https://github.com/hjdeepsleep/toy.git
+	branch = master
