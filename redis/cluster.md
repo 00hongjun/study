@@ -22,7 +22,7 @@
 * 1번째 port(6379)는 client에서 주로 접근하는 port입니다.
 * 2번째 port는(16379) cluster node 간의 장애 감지, 구성 정보 업데이트, 상태 체크 등에 사용됩니다. 이를 'cluster bus port'라고 합니다.
 * 앞서 말한 두 종류의 port 모드 접근이 가능해야 cluster가 정상 구성이 가능합니다.
-* 
+* 데이터가 없는 node만 cluster에 추가 가능합니다.
 
 
 # failover 처리
@@ -335,9 +335,3 @@ redis-cli --cluster del-node 127.0.0.1:7000 fe2e78f987a3d41f9f93b6990afcd240992f
 >>> Sending CLUSTER RESET SOFT to the deleted node.
 ```
 
-
----
-
-### 참조 
-redis doc 번역 : http://redisgate.kr/redis/cluster/cluster.php
-garimoo 블로그 : https://medium.com/garimoo/redis-documentation-2-%EB%A0%88%EB%94%94%EC%8A%A4-%ED%81%B4%EB%9F%AC%EC%8A%A4%ED%84%B0-%ED%8A%9C%ED%86%A0%EB%A6%AC%EC%96%BC-911ba145e63
