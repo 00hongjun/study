@@ -22,6 +22,7 @@
 * 1번째 port(6379)는 client에서 주로 접근하는 port입니다.
 * 2번째 port는(16379) cluster node 간의 장애 감지, 구성 정보 업데이트, 상태 체크 등에 사용됩니다. 이를 'cluster bus port'라고 합니다.
 * 앞서 말한 두 종류의 port 모드 접근이 가능해야 cluster가 정상 구성이 가능합니다.
+* 
 
 
 # failover 처리
