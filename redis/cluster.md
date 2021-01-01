@@ -10,7 +10,7 @@
 * 16383개의 slot을 가지고 있으며 0~16382의 번호를 가지고 있습니다.
 * 각 node는 slot을 나누어 가집니다.
 * 최소 3개의 master node가 필요합니다.
-* cluster 사용시 0번 DB만 사용 가능합니다.
+* cluster 사용 시 0번 DB만 사용 가능합니다.
 * 장애 복구 시나리오가 필요합니다.
 
 
@@ -24,11 +24,11 @@
 * 앞서 말한 두 종류의 port 모드 접근이 가능해야 cluster가 정상 구성이 가능합니다.
 
 
-# fail over 처리
+# failover 처리
 ## cluster-require-full-coverage
-cluster-require-full-coverage를 no로 설정 하였더라고 절반 이상의 node가 down되면 cluster가 중지됩니다.
-이를 방지 하기 위해선 `forget`을 이용하여 자동으로 cluster 사이즈를 줄여주어야 합니다.
-만약 4개의 node로 구성된 cluster에서 2개가 down됐을 경우 1개의 node를 자동으로 제외 시켜주어야 cluster 중지를 막을 수 있습니다.
+cluster-require-full-coverage를 no로 설정하였더라도 절반 이상의 node가 down 되면 cluster가 중지됩니다.
+이를 방지하기 위해선 `forget`을 이용하여 자동으로 cluster 사이즈를 줄여주어야 합니다.
+만약 4개의 node로 구성된 cluster에서 2개가 down 됐을 경우 1개의 node를 자동으로 제외해 주어야 cluster 중지를 막을 수 있습니다.
 ```
 7000>cluster forget {node id}
 
@@ -36,14 +36,29 @@ ex)
 7000>cluster forget 2708cfa1af06f102a8e11ca9b4c2a897012da463
 
 ```
+아래 방법도 가능 합니다.
+```
+redis-cli -p 7000 cluster forget 2708cfa1af06f102a8e11ca9b4c2a897012da463
+```
 
+forget으로 node를 cluster에서 제거했다면, 제거한 node의 slot을 다른 node에게 할당해 주어야 합니다.
+```
+redis-cli -p 7000 cluster addslots {1100..16383}
+```
+## slaver 서버가 구성 되어 있을경우
+master node가 down 되면 이에 대응하는 slave node가 자동으로 master로 승격됩니다.
+down된 node를 다시 복구하면 nodes.conf 파일에서 새로운 master가 지정된 것을 확인하고 slave로 cluster 구성에 추가됩니다.
+
+## nodes.conf를 이용하여 복구
+nodes.conf 파일이 관리 되어 있을겨우, 해당 파일을nodes.conf  copy하여 새로운 redis에 추가 하여 복구 할 수 있습니다.
+nodes.conf에는 node의 구성 정보가 기록 되어 있으므로, 새로 시작한 redis node는 자신이 이전 node의 자리에 참여합니다.
 
 # cluster를 구성해 보자
 
 ##  cluster 구성시 필요한 기본 설정 (redis.conf)
-* **cluster-enabled** : yes로 설정할 경우 cluster 모드를 사용합니다. yes로 설정 되어 있을때만 cluster로 시작하는 옵션을 설정 가능합니다.
-* **cluster-config-file** : redis cluster 구성이 기록되는 파일입니다. 해당 파일은 자동으로 관리되며 사용자가 임의로 수정해서는 안 됩니다.
-* **cluster-node-timeout** : cluster 구성원인 node를 fail over 상태로 인식하는 최대 시간입니다. 단위는 ms를 사용하며, node의 과반수가 down 상태로 체크할 경우 slave를 master로 승격하는 fail over 처리를 시작합니다.
+* **cluster-enabled** : yes로 설정할 경우 cluster 모드를 사용합니다. yes로 설정되어 있을 때만 cluster로 시작하는 옵션을 설정 가능합니다.
+* **cluster-config-file** : cluster의 node 구성이 기록되는 파일입니다. 해당 파일은 자동으로 관리됩니다. 임의로 수정 시에 정확한 확인이 필요합니다.
+* **cluster-node-timeout** : cluster 구성원인 node를 failover 상태로 인식하는 최대 시간입니다. 단위는 ms를 사용하며, node의 과반수가 down 상태로 체크할 경우 slave를 master로 승격하는 failover 처리를 시작합니다.
 명령어의 실행 시간을 생각해 3초 정도를 추천하며, 기본값인 15초를 튜닝 하는 것을 추천합니다.
 * **cluster-slave-validity-factor** : cluster는 master nodd 다운 시 해당 노드의 slave node를 master로 변경하는 장애 조치(failover)를 시작합니다.  이때 master와 slave node 간의 체크가 오랫동안 단절된 상태면 해당 slave는 승격 대상에서 제외됩니다. 이때 승격 대상에서 제외하는 판단 기준의 시간을 설정합니다.
 계산식 : (cluster-node-timeout * cluster-slave-validity-factor) + repl-ping-slave-period
@@ -52,7 +67,7 @@ ex)
     * yes : slave가 없는 master가 다운되면 cluster 전체가 중지
     * no : slave가 없는 mster가 다운되더라도 cluster는 유지합니다. 다운된 master의 슬롯에서만 에러가 발생합니다.
     * 일부 데이터가 유실돼도 괜찮으면 no, 데이터의 정합성이 중요하다면 yes를 선택하면 됩니다.
-    * no로 설정 하더라도 절반 이상의 node가 down되면 cluster는 중지 됩니다.
+    * no로 설정하더라도 절반 이상의 node가 down 되면 cluster는 중지됩니다.
 * **appendonly** : 데이터를 append only file에 쓸지 여부를 정합니다.(기본값=no)
 redis의 장애 발생 시 ram에 기록된 데이터가 증발하는데 이때 복구가 가능하도록 데이터 crud마다 디스크에 쓰기 작업을 합니다.
 파일명은 **appendfilename**에서 지정 합니다.
@@ -99,7 +114,7 @@ $redis-server ./7000/redis.conf
 25822:C 01 Jan 2021 00:38:26.377 # Configuration loaded
 25822:M 01 Jan 2021 00:38:26.379 * Increased maximum number of open files to 10032 (it was originally set to 1024).
 25822:M 01 Jan 2021 00:38:26.380 * No cluster configuration found, I'm d6a275651d1baaa736181c36893b468faaa0e0f8
-                _._                                                  
+                _._                                                 
            _.-``__ ''-._                                             
       _.-``    `.  `_.  ''-._           Redis 6.0.9 (00000000/0) 64 bit
   .-`` .-```.  ```\/    _.,_ ''-._                                   
@@ -259,9 +274,9 @@ $ redis-cli --cluster add-node 127.0.0.1:7006 127.0.0.1:7000
 지금은 7006이 cluster에 추가되었지만 slot 할당이 안 되어있습니다.
 `reshard` 명령을 이용하여 slot을 resharding 해 보겠습니다.
 아래의 순서대로 입력합니다.
-(1)이동하고자 하는 slot의 수
-(2)slot을 받을 node의 id
-(3)slot을 건네줄 node의 id (all 입력 시 골고루)
+(1) 이동하고자 하는 slot의 수
+(2) slot을 받을 node의 id
+(3) slot을 건네줄 node의 id (all 입력 시 골고루)
 (4) yes 입력
 ```
 $ redis-cli --cluster reshard 127.0.0.1:7000
