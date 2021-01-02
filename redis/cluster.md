@@ -51,8 +51,8 @@ master node가 down 되면 이에 대응하는 slave node가 자동으로 master
 down된 node를 다시 복구하면 nodes.conf 파일에서 새로운 master가 지정된 것을 확인하고 slave로 cluster 구성에 추가됩니다.
 
 ## nodes.conf를 이용하여 복구
-nodes.conf 파일이 관리 되어 있을겨우, 해당 파일을nodes.conf  copy하여 새로운 redis에 추가 하여 복구 할 수 있습니다.  
-nodes.conf에는 node의 구성 정보가 기록 되어 있으므로, 새로 시작한 redis node는 자신이 이전 node의 자리에 참여합니다.
+nodes.conf 파일이 관리되어 있을 경우, 해당 파일을 copy 하여 새로운 redis에 추가하여 복구할 수 있습니다.  
+nodes.conf에는 node의 구성 정보가 기록되어 있으므로, 새로 시작한 redis node는 자신이 이전 node의 자리에 참여합니다.
 
 # cluster를 구성해 보자
 
