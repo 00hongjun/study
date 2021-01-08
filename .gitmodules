@@ -2,3 +2,7 @@
 	path = toy
 	url = https://github.com/hjdeepsleep/toy.git
 	branch = master
+[submodule "algorithm"]
+	path = algorithm
+	url = https://github.com/hjdeepsleep/algorithm.git
+	branch = master
