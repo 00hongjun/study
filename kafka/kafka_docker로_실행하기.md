@@ -39,12 +39,12 @@ services:
 * 컨테이너 확인
     ```bash
     docker ps
+    docker ps -a
     ```
 * 모든 컨테이너 삭제
     ```bash
     docker stop $(docker ps -a -q)
     docker rm  $(docker ps -a -q)
-    docker ps -a
     ```
 * 컨테이너 접근
     ```bash
@@ -57,38 +57,51 @@ services:
 * 모든 토픽 리스트 조회
     * 컨테이너에 접근하여 실행
         ```bash
-        kafka-topics.sh --list --bootstrap-server localhost:9092
+        kafka-topics.sh --bootstrap-server localhost:9092 \
+        --list 
         ```
     * 호스트 환경에서 실행
         ```bash
         docker exec -it kafka1 kafka-topics.sh \
-        --list --bootstrap-server localhost:9092
+        --bootstrap-server localhost:9092 \
+        --list 
         ```
 * 토픽 생성
     ```bash
     docker exec -it kafka1 kafka-topics.sh \
-    --create --topic test-events --bootstrap-server localhost:9092
+    --bootstrap-server localhost:9092 \
+    --create --topic test-events 
     ```
     > test-events라는 이름의 topic을 생성한다.
 
 * 토픽 상태 확인
     ```bash
     docker exec -it kafka1 kafka-topics.sh \
-    --describe --topic test-events --bootstrap-server localhost:9092
+    --bootstrap-server localhost:9092 \
+    --describe --topic test-events
     ```
 * 토픽 삭제
     ```bash
     docker exec -it kafka1 kafka-topics.sh \
-    --delete --topic test-events --bootstrap-server localhost:9092
+    --bootstrap-server localhost:9092 \
+    --delete --topic test-events
     ```
 * producer 실행
     ```bash
     docker exec -it kafka1 kafka-console-producer.sh \
-    --topic test-events --bootstrap-server localhost:9092
+    --bootstrap-server localhost:9092 \
+    --topic test-events
     ```
-    * 채ㅜㄴ 실행
-```bash
-# 메시지 읽기
-docker exec -it kafka1 kafka-console-consumer.sh \
---topic test-events --from-beginning --bootstrap-server localhost:9092
-```
+* consumer 실행
+    * 실행 시점의 message 부터 읽기
+        ```bash
+        docker exec -it kafka1 kafka-console-consumer.sh \
+        --bootstrap-server localhost:9092 \
+        --topic test-events
+        ```
+    * 첫 message 부터 읽기
+        ```bash
+        docker exec -it kafka1 kafka-console-consumer.sh \
+        --bootstrap-server localhost:9092 \
+        --topic test-events --from-beginning
+        ```
