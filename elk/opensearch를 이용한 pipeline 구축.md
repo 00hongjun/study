@@ -1,4 +1,4 @@
-# opensearch를 이용한 pipeline 구축
+# opensearch를 이용한 로그 수집 pipeline 구축
 
 `Amazon Linux 2023` 기준으로 정리하였다.  
 버전 호환은 Opensearch 2.7.x의 [문서](https://opensearch.org/docs/latest/tools/index/#downloads)를 확인하였다.
@@ -13,29 +13,40 @@ oss-7.16.2 버전을 설치 한다. → [다운로드 링크](https://opensearch
 
 ```shell
  # 다운로드
- $ wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-7.16.3-linux-x86_64.tar.gz
+ $ wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-7.12.1-linux-x86_64.tar.gz
  
  # 압축 풀기
- $ tar xzf filebeat-oss-7.16.3-linux-x86_64.tar.gz
+ $ tar xzf filebeat-oss-7.12.1-linux-x86_64.tar.gz
 ```
+
+* issue  
+  `Fatal glibc error: rseq registration failed` 에러 로그가 발생하여 버전을 변경하여 구성하였다.  
+  -> [링크](https://opensearch.org/docs/latest/tools/index/#downloads)를 보면 7.12.1 버전으로 설명한다.
+    ```shell
+     # 다운로드
+     $ wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-7.16.3-linux-x86_64.tar.gz
+     
+     # 압축 풀기
+     $ tar xzf filebeat-oss-7.16.3-linux-x86_64.tar.gz
+    ```
 
 ### 설정
 
 먼저 filebeat.yml에 수집 대상 file과 logstash 정보 등을 지정해야 한다.  
-설치 경로의 `./bin` 경로로 이동하면 `filebeat.yml` [파일의 원본](https://github.com/hjhello423/dev-study/blob/main/elk/filebeat.yml)
-과 `filebeat.reference.yml`이 있으므로 참고로 사용하면 좋다.
+설치 경로의 `./bin` 경로로 이동하면 `filebeat.yml` 파일의 원본과 `filebeat.reference.yml`이 있으므로 참고로 사용하면 좋다.    
+[filebeat.yml의 원본](./설정_파일_원본/filebeat.yml)은 링크 참고.
 
-```
+```yaml
 # ============================== Filebeat inputs ===============================
 
 filebeat.inputs:
-- type: logm
-  enabled: true
-  paths:
-    - /home/ec2-user/logs/payment-app.log
-  multiline.pattern: ^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}
-  multiline.negate: true
-  multiline.match: after
+  - type: log
+    enabled: true
+    paths:
+      - /home/ec2-user/logs/service/payment-app.log
+    multiline.pattern: ^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}
+    multiline.negate: true
+    multiline.match: after
 
 
 # ============================== Filebeat modules ==============================
@@ -65,7 +76,7 @@ fields:
 
 # ------------------------------ Logstash Output -------------------------------
 output.logstash:
-  hosts: ["localhost:5044"]
+  hosts: [ "111.1.1.111:5044" ] # logstash ip 입력
 
 
 # ================================= Processors =================================
@@ -183,11 +194,15 @@ $ cp logstash-sample.conf ./conf.d/logstash.conf
 
 #### logstash.yml 설정
 
-`{설치경로}/config/logstash.yml` 파일의 설정을 변경한다.
+`{설치경로}/config/logstash.yml` 파일의 설정을 변경한다.  
+[logstash.yml의 원본](./설정_파일_원본/logstash.yml)은 링크 참고
 
 - logstash.yml
-    ```bash
+    ```yaml
+    # ------------ Pipeline Settings --------------
     pipeline.ordered: auto
+  
+    # ------------ Pipeline Configuration Settings --------------
     config.reload.automatic: true
     
     # ------------ Debugging Settings --------------
@@ -195,7 +210,111 @@ $ cp logstash-sample.conf ./conf.d/logstash.conf
     path.logs: /home/ec2-user/logs/logstash
     ```
 
+#### pipelines.yml 설정
+
+`{설치경로}/config/pipelines.yml`의 설정을 변경한다.  
+[pipelines.ym의 원본](./설정_파일_원본/pipelines.yml)은 링크 참고
+
+- pipelines.yml
+    ```yaml 
+    - pipeline.id: payments-app
+       queue.type: persisted
+       path.config: "{설치 경로}/config/conf.d/payments-app.conf"
+    ```
+
+#### xxx.conf 설정
+
+`pipelines.yml` 에서 지정한 xxx.conf 파일을 `{설치경로}/config/conf.d` 경로에 생성한다.  
+[logstash-sample.conf의 원본](./설정_파일_원본/logstash-sample.conf)은 링크 참고
+
+```bash
+# 이동
+$ cd {설치 경로}/config/conf.d
+
+# 파일 생성
+$ touch payments-app.conf
+```
+
+- payments-app.conf
+    ```
+    input {
+        beats {
+        port => 5044
+        }
+    }
+
+    filter {
+        grok {
+            match => {
+              "message" => "%{TIMESTAMP_ISO8601:timeStamp}%{SPACE}%{LOGLEVEL:logLevel}%{SPACE}%{NUMBER:processId}%{SPACE}---%{SPACE}(\[%{DATA:threadName}\])%{SPACE}%{GREEDYDATA:class}%{SPACE}(\[%{DATA:traceId}\])%{SPACE}:%{SPACE}%{GREEDYDATA:msg}"
+            }
+        }
+    
+        date {
+            match => ["timeStamp", "yyyy-MM-dd HH:mm:ss.SSS", "ISO8601"]
+        }
+    }
+  
+    output {
+        opensearch {
+            hosts => ["111.1.1.111:443"] # opensearch의 endpoint
+            user => "admin"
+            password => "password"
+            index => "%{[fields][service]}-log-%{+YYYYMMdd}"
+            ssl => true
+            ecs_compatibility => "disabled"
+        }
+    }
+    ```
+
+    ```
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      grok {
+        match => {
+          "message" =>"%{TIMESTAMP_ISO8601:timeStamp}%{SPACE}%{LOGLEVEL:logLevel}%{SPACE}%{NUMBER:processId}%{SPACE}---%{SPACE}(\[%{DATA:threadName}\])%{SPACE}%{GREEDYDATA:class}%{SPACE}(\[%{DATA:traceId}\])%{SPACE}:%{SPACE}%{GREEDYDATA:msg}"
+        }
+      }
+    
+      grok {
+        match => {
+          "msg" => "\[%{GREEDYDATA:logPrefix}\]%{SPACE}\[description\]\=%{GREEDYDATA:description}\[data\]\=%{GREEDYDATA:data}\[errorCode\]\=%{GREEDYDATA:errorCode}\[exception\]\=%{GREEDYDATA:exception}"
+        }
+      }
+    
+      date {
+        match => ["timeStamp", "yyyy-MM-dd HH:mm:ss.SSS", "ISO8601"]
+      }
+    }
+    
+    output {
+     opensearch {
+        hosts => ["111.1.1.111:443"] # opensearch의 endpoint
+        user => "admin"
+        password => "password"
+        index => "system-app-test-index"
+        ssl => true
+        ecs_compatibility => "disabled"
+      }
+    }
+    ```
+
 ### 실행 및 로그
+
+```shell
+# 데몬
+$ nohup {설치 경로}/bin/logstash -f {설치 경로}/config/conf.d/payments-app.conf --config.reload.automatic > /dev/null &
+
+# 실행
+$ {설치 경로}/bin/logstash -f {설치 경로}/config/conf.d/payments-app.conf --config.reload.automatic
+
+
+```
 
 ---
 
@@ -204,3 +323,4 @@ $ cp logstash-sample.conf ./conf.d/logstash.conf
 * https://opensearch.org/docs/latest/tools/index/#downloads
 * https://opensearch.org/blog/introducing-logstash-input-opensearch-plugin-for-opensearch/
 * https://opensearch.org/docs/latest/tools/logstash/index/#install-logstash
+* https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html#plugins-filters-grok-match
