@@ -107,7 +107,7 @@ $ chmod go-w filebeat.yml
 
 `{설치 경로}` 부분의 경로를 입력하여 아래 명령어를 실행한다.
 
-```
+```shell
 # 데몬으로 실행
 $ nohup {설치 경로}/filebeat -c {설치 경로}/filebeat.yml > /dev/null &
 
@@ -137,7 +137,7 @@ $ sudo yum -y install java-1.8.0-amazon-corretto-devel.x86_64
 
 7.16.3버전의 logstash-oss를 다운 받고 압축을 푼다.
 
-```
+```shell
 # 파일 다운로드
 $ wget https://artifacts.opensearch.org/logstash/logstash-oss-with-opensearch-output-plugin-7.16.3-linux-x64.tar.gz
 
@@ -163,7 +163,7 @@ Installation successful
 
 * issue   
   아래와 같이 Killed 메시지가 출력되면서 플러그인 설치가 안되는 경우가 있었다.
-  ```bash
+  ```shell
   $ ./bin/logstash-plugin install --preserve logstash-input-opensearch
 
   Using bundled JDK: /home/ec2-user/logstash-7.16.3/jdk
@@ -180,14 +180,14 @@ Installation successful
 
 먼저 logstash 설치 경로 하위의 config 디렉토리에서 conf.d 이름의 디렉토리를 생성한다.
 
-```bash
+```shell
 $ cd {설치 경로}/config
 $ mkdir conf.d
 ```
 
 logstash의 일부 설정 파일을 conf.d로 복사해 사용한다.
 
-```bash
+```shell
 $ cd {설치 경로}/config
 $ cp logstash-sample.conf ./conf.d/logstash.conf
 ```
@@ -227,7 +227,7 @@ $ cp logstash-sample.conf ./conf.d/logstash.conf
 `pipelines.yml` 에서 지정한 xxx.conf 파일을 `{설치경로}/config/conf.d` 경로에 생성한다.  
 [logstash-sample.conf의 원본](./설정_파일_원본/logstash-sample.conf)은 링크 참고
 
-```bash
+```shell
 # 이동
 $ cd {설치 경로}/config/conf.d
 
@@ -272,7 +272,7 @@ $ touch payments-app.conf
       }
     }
     ```
-  pattenr 파일을 사용하는 경우의 payments-app.conf설정
+  pattern 파일을 사용하는 경우의 payments-app.conf설정
     ```
     input {
       beats {
