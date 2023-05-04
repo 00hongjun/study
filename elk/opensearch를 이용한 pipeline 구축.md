@@ -238,37 +238,6 @@ $ touch payments-app.conf
 - payments-app.conf
     ```
     input {
-        beats {
-        port => 5044
-        }
-    }
-
-    filter {
-        grok {
-            match => {
-              "message" => "%{TIMESTAMP_ISO8601:timeStamp}%{SPACE}%{LOGLEVEL:logLevel}%{SPACE}%{NUMBER:processId}%{SPACE}---%{SPACE}(\[%{DATA:threadName}\])%{SPACE}%{GREEDYDATA:class}%{SPACE}(\[%{DATA:traceId}\])%{SPACE}:%{SPACE}%{GREEDYDATA:msg}"
-            }
-        }
-    
-        date {
-            match => ["timeStamp", "yyyy-MM-dd HH:mm:ss.SSS", "ISO8601"]
-        }
-    }
-  
-    output {
-        opensearch {
-            hosts => ["111.1.1.111:443"] # opensearch의 endpoint
-            user => "admin"
-            password => "password"
-            index => "%{[fields][service]}-log-%{+YYYYMMdd}"
-            ssl => true
-            ecs_compatibility => "disabled"
-        }
-    }
-    ```
-
-    ```
-    input {
       beats {
         port => 5044
       }
@@ -297,12 +266,54 @@ $ touch payments-app.conf
         hosts => ["111.1.1.111:443"] # opensearch의 endpoint
         user => "admin"
         password => "password"
-        index => "system-app-test-index"
+        index => "test-index-%{[fields][service]}-%{[fields][module]}-log-%{+YYYYMMdd}"
         ssl => true
         ecs_compatibility => "disabled"
       }
     }
     ```
+  pattenr 파일을 사용하는 경우의 payments-app.conf설정
+    ```
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      grok {
+        patterns_dir => ["{설치 경로}/config/conf.d/system-app.pattern"]
+        match => { "message" => "%{APPLICATION_LOG}" }
+      }
+    
+      grok {
+        patterns_dir => ["{설치 경로}/config/conf.d/system-app.pattern"]
+        match => { "msg" => "%{LOG_DETAIL}" }
+      }
+    
+      date {
+        match => ["timeStamp", "yyyy-MM-dd HH:mm:ss.SSS", "ISO8601"]
+      }
+    }
+    
+    output {
+      opensearch {
+        hosts => ["111.1.1.111:443"] # opensearch의 endpoint
+        user  =>  "admin"
+        password  =>  "password"
+        index => "test-index-%{[fields][service]}-%{[fields][module]}-log-%{+YYYYMMdd}"
+        ssl => true
+        ecs_compatibility => "disabled"
+      }
+    }
+    ```
+
+system-app.pattern
+
+```
+APPLICATION_LOG %{TIMESTAMP_ISO8601:timeStamp}%{SPACE}%{LOGLEVEL:logLevel}%{SPACE}%{NUMBER:processId}%{SPACE}---%{SPACE}(\[%{DATA:threadName}\])%{SPACE}%{GREEDYDATA:class}%{SPACE}(\[%{DATA:traceId}\])%{SPACE}:%{SPACE}%{GREEDYDATA:msg}
+LOG_DETAIL \[%{GREEDYDATA:logPrefix}\]%{SPACE}\[description\]\=%{GREEDYDATA:description}\[data\]\=%{GREEDYDATA:data}\[errorCode\]\=%{GREEDYDATA:errorCode}\[exception\]\=%{GREEDYDATA:exception}
+```
 
 ### 실행 및 로그
 
