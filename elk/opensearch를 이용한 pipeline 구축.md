@@ -259,6 +259,13 @@ $ touch payments-app.conf
       date {
         match => ["timeStamp", "yyyy-MM-dd HH:mm:ss.SSS", "ISO8601"]
       }
+  
+      mutate {
+        convert => {
+          "data" => "string"
+          "errorCode" => "string"
+         }
+      }
     }
     
     output {
